@@ -74,10 +74,10 @@ body {
 }
 
 @layer components {
-  /* פס הקשת של עלי הכותרת */
+  /* פס הקשת של עלי הכותרת — מתחיל באדום מימין (RTL) */
   .petal-ribbon {
     background: linear-gradient(
-      90deg,
+      270deg,
       rgb(var(--petal-red)),
       rgb(var(--petal-orange)),
       rgb(var(--petal-yellow)),
