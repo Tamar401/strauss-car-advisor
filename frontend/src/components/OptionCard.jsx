@@ -39,6 +39,10 @@ export default function OptionCard({ result, current, isCurrent = false, receipt
         {result.explanation}
       </p>
 
+      {complete && result.trace?.find((t) => t.key === "participation")?.source?.startsWith("קטלוג") && (
+        <div className="mt-2 text-[11px] text-warn">ⓘ ההשתתפות כאן היא ברירת המחדל מהקטלוג — כדאי לוודא מול הנציג</div>
+      )}
+
       {complete && <NetWaterfall steps={result.waterfall} total={result.delta_display} />}
       {result.trace?.length > 0 && (isCurrent || complete) && <Receipt current={isCurrent ? null : current} alt={result} defaultOpen={receiptOpen} />}
     </Card>

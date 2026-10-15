@@ -349,6 +349,15 @@ def compare_all(profile: EmployeeProfile, rules: Rules | None = None) -> Compare
     return resp
 
 
+def demo_question_option(employee_id: str) -> OptionRequest:
+    """החלופה שהעובד לדוגמה שאל עליה (מגיליון 'חישובים'), למשל 'ATTO 3 (2025)' או 'ויתור - אחזקת רכב'."""
+    text = next(g for g in seed.golden() if g["employee_id"] == employee_id)["alternative"]
+    if text.startswith("ויתור"):
+        return OptionRequest(kind="waiver")
+    model = text.rsplit(" (", 1)[0]
+    return OptionRequest(kind="car", car_id=next(c["id"] for c in seed.catalog() if c["model"] == model))
+
+
 def demo_profile(employee: dict) -> EmployeeProfile:
     """פרופיל מלא מאחד העובדים לדוגמה — לבדיקות ולכפתור "נתוני דמו"."""
 
