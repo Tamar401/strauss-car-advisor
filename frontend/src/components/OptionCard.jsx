@@ -28,7 +28,8 @@ export default function OptionCard({ result, isCurrent = false }) {
           <div className="text-xs text-ink-soft">נטו משוער</div>
           <Money value={result.net} className="font-display text-2xl font-bold" />
         </div>
-        {!isCurrent && result.delta_net != null && <Delta value={result.delta_net} size="lg" />}
+        {/* delta_display = נטו מעוגל פחות נטו מעוגל, כך שהמספרים על המסך מסתדרים */}
+        {!isCurrent && result.delta_display != null && <Delta value={result.delta_display} size="lg" />}
       </div>
 
       <p className="mt-4 whitespace-pre-line border-t border-border/70 pt-3 text-sm leading-relaxed text-ink-soft">

@@ -32,8 +32,8 @@ config/strauss-rules.json   כללי האתגר (תקציבים, מסלולים,
 data/raw/                   מאגר שווי השימוש (cp1255) + אקסל האתגר
 data/seed/                  JSON שיוצא מהאקסל: catalog, occupations, employees, golden
 backend/app/contracts.py    החוזים: מקור האמת למבני הנתונים
-backend/app/api/            נתיבי ה-API (כרגע חלקם מדומים, ראו docs/CONTRACTS.md)
-backend/app/mocks/          תשובת השוואה לדוגמה (E-001, מספרים אמיתיים)
+backend/app/engine/         המנוע: rules (כללים) · vou (מאגר שווי שימוש) · eligibility · net · compare
+backend/app/api/            נתיבי ה-API (צ'אט ונציג עדיין מדומים, ראו docs/CONTRACTS.md)
 backend/scripts/            export_seed.py: אקסל → seed
 frontend/src/design/        מערכת העיצוב המשותפת (tokens + רכיבים), דוגמאות ב-/design
 frontend/src/pages/         עובד · נציג · כללים · מערכת עיצוב

@@ -1,4 +1,4 @@
-"""בדיקות שהחוזה, ה-seed וה-API המדומה מסונכרנים. אם נשבר כאן — מישהי שינתה חוזה בלי לעדכן."""
+"""בדיקות שה-API, החוזה וה-seed מסונכרנים. אם נשבר כאן — מישהי שינתה חוזה בלי לעדכן."""
 from fastapi.testclient import TestClient
 
 from app import seed
@@ -17,20 +17,19 @@ def test_seed_matches_contracts():
         Occupation.model_validate(o)
 
 
-def test_mock_compare_is_valid_and_matches_golden():
-    resp = CompareResponse.model_validate(seed.mock("compare_E-001.json"))
+def test_demo_compare_endpoint():
+    resp = CompareResponse.model_validate(client.get("/api/demo/compare/E-001").json())
     golden = next(g for g in seed.golden() if g["employee_id"] == "E-001")
     atto3 = next(a for a in resp.alternatives if a.option.car_id == "CAR-10")
     assert round(resp.current.net) == golden["net_today"]
-    assert round(atto3.net) == golden["net_alternative"]
-    assert round(atto3.delta_net) == golden["delta"]
+    assert atto3.delta_display == golden["delta"]
 
 
-def test_waterfall_sums_to_delta():
-    resp = CompareResponse.model_validate(seed.mock("compare_E-001.json"))
-    for alt in resp.alternatives:
-        if alt.waterfall:
-            assert abs(sum(s.amount for s in alt.waterfall) - alt.delta_net) < 1e-6
+def test_compare_endpoint_rejects_unknown_car():
+    employee = client.get("/api/demo-employees").json()[0]
+    assert "national_id" not in employee
+    body = {"profile": {}, "alternatives": [{"kind": "car", "car_id": "CAR-99"}]}
+    assert client.post("/api/compare", json=body).status_code == 400
 
 
 def test_chat_flow_and_resume():

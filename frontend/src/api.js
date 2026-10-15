@@ -15,6 +15,8 @@ export const api = {
   demoEmployees: () => request("/demo-employees"),
   rules: () => request("/rules"),
   compare: (profile, alternatives) => request("/compare", { method: "POST", body: { profile, alternatives } }),
+  compareAll: (profile) => request("/compare/all", { method: "POST", body: { profile } }),
+  demoCompare: (employeeId) => request(`/demo/compare/${employeeId}`),
   chat: (conversationId, message) =>
     request("/chat", { method: "POST", body: { conversation_id: conversationId, message } }),
   conversation: (id) => request(`/conversations/${id}`),

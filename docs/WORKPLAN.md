@@ -3,7 +3,7 @@
 | יום | מפתחת א': המספרים והשקיפות | מפתחת ב': השיחה והאנשים |
 |---|---|---|
 | **14/10 (ביחד)** | ✅ מבנה, חוזים, seed, מערכת עיצוב, API מדומה | |
-| **15/10** | `backend/app/engine/`: טעינת ה-CSV ל-SQLite במפתח המלא (ראו DATA_FINDINGS §1), מנוע נטו עם trace, `tests/test_golden.py` על 6 העובדים | `rules.py` (Pydantic על strauss-rules.json), `eligibility.py` (קבוצה ומטה, משפחתי, ויתור לפי עיסוק), בדיקות |
+| **15/10** | ✅ `engine/vou.py` (SQLite, מפתח מלא), `engine/net.py` (נטו + trace + גילום), `engine/compare.py`, `/api/compare` אמיתי, בדיקות זהב | ✅ `engine/rules.py` (Pydantic + ולידציה), `engine/eligibility.py`, 43 בדיקות קצה |
 | **16/10** | `/api/compare` אמיתי + גרף מפל (Recharts) + טבלת השוואה | `agent/`: לולאת כלים ב-Gemini (בלי automatic function calling), מכונת מצבים, צ'אט + כרטיס פרופיל עם `SourceBadge` |
 | **17/10** | תור נציג ב-SQLite: מענה → עדכון הפרופיל → חישוב מחדש. מסך נציג | Number Guard, פרומפט שאוסר ניחוש, כלי `ask_rep`, שמירת השיחות ב-SQLite |
 | **18/10** | החלפת רכב מתוך ההשוואה וחישוב מחדש, "קבלה" נפתחת מה-trace | 15 תרחישי שיחה (`tests/test_scenarios.py`), מסך כללים עם עריכה + ולידציה |

@@ -1,6 +1,6 @@
 """/api/chat ו-/api/conversations — בעלות: מפתחת ב'.
 
-כרגע: בוט מדומה עם זיכרון בתהליך, כדי שהממשק יעבוד מול החוזה.
+כרגע: בוט מדומה עם זיכרון בתהליך (ההשוואה עצמה כבר מהמנוע האמיתי), כדי שהממשק יעבוד מול החוזה.
 להחליף ב: orchestrator של Gemini + שמירה ב-SQLite (המצב חייב לשרוד רענון וגם הפעלה מחדש של השרת).
 """
 from datetime import datetime, timezone
@@ -9,7 +9,8 @@ from uuid import uuid4
 from fastapi import APIRouter, HTTPException
 
 from app import seed
-from app.contracts import ChatMessage, ChatRequest, CompareResponse, ConversationState, EmployeeProfile
+from app.contracts import ChatMessage, ChatRequest, ConversationState, EmployeeProfile
+from app.engine.compare import compare_all, demo_profile
 
 router = APIRouter(prefix="/api", tags=["chat"])
 
@@ -45,12 +46,15 @@ def chat(req: ChatRequest):
     if len(conv.messages) == 1:
         conv.messages.append(_msg("assistant", "בכיף! נתחיל מהבסיס: באיזו קבוצת זכאות את/ה (א-ד), ומה שכר הבסיס החודשי שלך?"))
     else:
-        comparison = CompareResponse.model_validate(seed.mock("compare_E-001.json"))
+        # עד שהסוכן מוכן: השוואה אמיתית מהמנוע לעובדת E-001
+        employee = next(e for e in seed.employees() if e["id"] == "E-001")
+        comparison = compare_all(demo_profile(employee))
+        best = comparison.alternatives[0]
         conv.last_comparison = comparison
         conv.status = "ready"
         conv.messages.append(_msg(
             "assistant",
-            "הנה ההשוואה (נתוני דמו): מעבר ל-ATTO 3 מעלה את הנטו ב-661 ₪ בחודש.",
+            f"הנה ההשוואה (נתוני דמו של {employee['name']}): החלופה המשתלמת ביותר היא {best.label}.\n{best.explanation}",
             comparison=comparison,
         ))
     return conv
