@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { api } from "../api";
-import OptionCard from "../components/OptionCard";
+import ComparisonGrid from "../components/ComparisonGrid";
 import ProfileCard from "../components/ProfileCard";
 import { Button, Card, ChatBubble, Notice, PetalMark, SectionTitle } from "../design/components";
 
@@ -51,6 +51,8 @@ export default function EmployeePage() {
   const [error, setError] = useState(null);
   const [catalog, setCatalog] = useState({});
   const [demos, setDemos] = useState([]);
+  const [exploring, setExploring] = useState(false);
+  const [exploreError, setExploreError] = useState(null);
   const endRef = useRef(null);
   const busy = pending != null;
 
@@ -104,9 +106,22 @@ export default function EmployeePage() {
     }
   }
 
+  async function explore() {
+    setExploring(true);
+    setExploreError(null);
+    try {
+      setState(await api.explore(state.conversation_id));
+    } catch (err) {
+      setExploreError(err.message);
+    } finally {
+      setExploring(false);
+    }
+  }
+
   function reset() {
     storeId(null);
     setState(null);
+    setExploreError(null);
   }
 
   // ההשוואה האחרונה שצורפה להודעה — כך הכרטיסים תמיד תואמים למה שהבוט אמר
@@ -226,14 +241,17 @@ export default function EmployeePage() {
           )}
 
           <div>
-            <SectionTitle hint={comparison ? `כללים: ${comparison.rules_version}` : undefined}>ההשוואה שלך</SectionTitle>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <SectionTitle hint={comparison ? `כללים: ${comparison.rules_version}` : undefined}>ההשוואה שלך</SectionTitle>
+              {state && (
+                <Button variant="secondary" onClick={explore} disabled={exploring || busy}>
+                  {exploring ? "מחשב…" : "✨ כל האפשרויות שלי"}
+                </Button>
+              )}
+            </div>
+            {exploreError && <Notice>{exploreError}</Notice>}
             {comparison ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <OptionCard result={comparison.current} isCurrent />
-                {comparison.alternatives.map((a, i) => (
-                  <OptionCard key={i} result={a} current={comparison.current} />
-                ))}
-              </div>
+              <ComparisonGrid comparison={comparison} />
             ) : (
               <Card className="glass flex flex-col items-center gap-3 py-12 text-center">
                 <div className="petal-ribbon h-1.5 w-24 rounded-full opacity-70" />

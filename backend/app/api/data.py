@@ -1,4 +1,4 @@
-"""נתוני עזר: קטלוג, עיסוקים, עובדים לדוגמה, כללים. אמיתי כבר עכשיו (קורא מה-seed)."""
+"""נתוני עזר: קטלוג, עיסוקים, עובדים לדוגמה (קורא מה-seed). הכללים — ב-api/rules.py."""
 from fastapi import APIRouter
 
 from app import seed
@@ -21,8 +21,3 @@ def get_occupations():
 def get_demo_employees():
     """6 העובדים לדוגמה — לכפתורי "מלא נתוני דמו" בהדגמה. בלי ת״ז."""
     return [{k: v for k, v in e.items() if k != "national_id"} for e in seed.employees()]
-
-
-@router.get("/rules")
-def get_rules():
-    return seed.rules()

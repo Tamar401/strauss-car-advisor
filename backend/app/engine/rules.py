@@ -11,7 +11,7 @@ from typing import Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
 
-from app.seed import RULES_PATH
+from app import seed
 
 
 class _Model(BaseModel):
@@ -116,5 +116,6 @@ class Rules(_Model):
         return self.group_order.index(group)
 
 
-def load_rules(path: Path = RULES_PATH) -> Rules:
+def load_rules(path: Path | None = None) -> Rules:
+    path = path or seed.RULES_PATH  # נקרא בכל קריאה — כך שינוי בקובץ (או בבדיקות) נכנס לתוקף מיד
     return Rules.model_validate(json.loads(path.read_text(encoding="utf-8")))

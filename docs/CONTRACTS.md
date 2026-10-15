@@ -10,6 +10,10 @@
 | `GET /api/occupations` | אמיתי | משותף | `list[Occupation]` |
 | `GET /api/demo-employees` | אמיתי | משותף | 6 העובדים לדוגמה, בלי ת״ז |
 | `GET /api/rules` | אמיתי | ב' | קובץ הכללים |
+| `POST /api/rules/preview` | אמיתי | ב' | `{rules}` ← ולידציה + ההשפעה על 6 העובדים לדוגמה (לפני/אחרי). לא שומר. 422 עם `{message, problems}` |
+| `PUT /api/rules` | אמיתי | ב' | שומר אחרי ולידציה; הגרסה הקודמת נשמרת ב-`config/history/`. ⚠️ בפיילוט: רק למנהלים מחוברים |
+| `POST /api/rules/undo` | אמיתי | ב' | משחזר את הגרסה האחרונה מההיסטוריה (404 אם אין) |
+| `POST /api/conversations/{id}/explore` | אמיתי | א' | כל החלופות בבת אחת, בלי מודל שפה. 409 אם הפרופיל לא שלם |
 | `POST /api/compare` | אמיתי | א' | `CompareResponse` (400 על רכב לא מוכר) |
 | `POST /api/compare/all` | אמיתי | א' | כל רכב בקטלוג + ויתור, ממוין: מחושבות לפי ההפרש, אחריהן חלקיות, בסוף לא זמינות |
 | `GET /api/demo/compare/{id}` | אמיתי | משותף | `compare/all` לאחד מ-6 העובדים לדוגמה |
