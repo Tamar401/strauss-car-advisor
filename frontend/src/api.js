@@ -49,6 +49,11 @@ export const api = {
     request("/chat", { method: "POST", body: { conversation_id: conversationId, message } }),
   conversation: (id) => request(`/conversations/${id}`),
   explore: (id) => request(`/conversations/${id}/explore`, { method: "POST" }),
+  correctProfile: (id, fields, currentParticipation) =>
+    request(`/conversations/${id}/profile`, {
+      method: "PATCH",
+      body: { fields, current_participation: currentParticipation ?? null },
+    }),
   loadDemo: (conversationId, employeeId) =>
     request(`/conversations/${conversationId ?? "new"}/demo/${employeeId}`, { method: "POST" }),
   checkAccess: (role, code) => request(`/auth/check/${role}`, { headers: { "X-Access-Code": code } }),
