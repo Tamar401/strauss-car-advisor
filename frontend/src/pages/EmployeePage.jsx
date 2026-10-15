@@ -233,7 +233,7 @@ export default function EmployeePage() {
         </Card>
 
         <div className="space-y-6">
-          {state && <ProfileCard state={state} catalog={catalog} />}
+          {state && <ProfileCard state={state} catalog={catalog} onUpdated={setState} />}
 
           {state?.pending_questions?.length > 0 && (
             <Notice>

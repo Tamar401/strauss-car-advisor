@@ -1,6 +1,7 @@
 // כרטיס חלופה — בעלות: מפתחת א'. כולל את גרף המפל ואת ה"קבלה" הנפתחת.
 import { Card, Delta, DRIVE, DriveTag, Money, StatusBadge } from "../design/components";
 import NetWaterfall from "./NetWaterfall";
+import OptionFacts from "./OptionFacts";
 import Receipt from "./Receipt";
 
 export default function OptionCard({ result, current, isCurrent = false, receiptOpen = false }) {
@@ -38,6 +39,8 @@ export default function OptionCard({ result, current, isCurrent = false, receipt
       <p className="mt-4 whitespace-pre-line border-t border-border/70 pt-3 text-sm leading-relaxed text-ink-soft">
         {result.explanation}
       </p>
+
+      <OptionFacts result={result} isCurrent={isCurrent} />
 
       {complete && result.trace?.find((t) => t.key === "participation")?.source?.startsWith("קטלוג") && (
         <div className="mt-2 text-[11px] text-warn">ⓘ ההשתתפות כאן היא ברירת המחדל מהקטלוג — כדאי לוודא מול הנציג</div>
