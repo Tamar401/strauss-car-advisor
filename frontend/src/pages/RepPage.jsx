@@ -56,6 +56,11 @@ export default function RepPage() {
     <div className="mx-auto max-w-3xl">
       <SectionTitle hint={`${open} פתוחות`}>שאלות מעובדים</SectionTitle>
       <div className="space-y-4">
+        {questions.length === 0 && (
+          <Card className="glass py-10 text-center text-sm text-ink-soft">
+            אין שאלות כרגע. כשהבוט יצטרך מידע שהעובד לא יודע, השאלה תופיע כאן — והתשובה שלך תעדכן את השיחה של העובד מיד.
+          </Card>
+        )}
         {questions.map((q) => (
           <QuestionCard key={q.id} q={q} onAnswered={load} />
         ))}

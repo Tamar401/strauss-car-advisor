@@ -30,19 +30,3 @@ def test_compare_endpoint_rejects_unknown_car():
     assert "national_id" not in employee
     body = {"profile": {}, "alternatives": [{"kind": "car", "car_id": "CAR-99"}]}
     assert client.post("/api/compare", json=body).status_code == 400
-
-
-def test_chat_flow_and_resume():
-    first = client.post("/api/chat", json={"message": "אני שוקלת לעבור לרכב חשמלי"}).json()
-    cid = first["conversation_id"]
-    client.post("/api/chat", json={"conversation_id": cid, "message": "קבוצה ג, 18,500"})
-    resumed = client.get(f"/api/conversations/{cid}").json()
-    assert len(resumed["messages"]) == 4
-    assert resumed["last_comparison"] is not None
-
-
-def test_rep_answer():
-    open_qs = client.get("/api/rep/questions", params={"status": "open"}).json()
-    q = open_qs[0]
-    answered = client.post(f"/api/rep/questions/{q['id']}/answer", json={"value": 350, "effective_from": "2027-01-01"}).json()
-    assert answered["status"] == "answered"

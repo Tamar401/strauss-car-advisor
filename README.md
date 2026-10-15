@@ -16,7 +16,7 @@
 cd backend
 pip install -r requirements.txt
 cp .env.example .env          # וממלאים GEMINI_API_KEY
-python -m uvicorn app.main:app --reload --port 8000
+python -m uvicorn app.main:app --port 8000   # אחרי שינוי בקוד: לעצור ולהפעיל שוב (--reload נתקע אצלנו ב-Windows)
 python -m pytest -q            # בדיקות
 
 # ממשק (Node 20+), בטרמינל נוסף
@@ -33,7 +33,9 @@ data/raw/                   מאגר שווי השימוש (cp1255) + אקסל �
 data/seed/                  JSON שיוצא מהאקסל: catalog, occupations, employees, golden
 backend/app/contracts.py    החוזים: מקור האמת למבני הנתונים
 backend/app/engine/         המנוע: rules (כללים) · vou (מאגר שווי שימוש) · eligibility · net · compare
-backend/app/api/            נתיבי ה-API (צ'אט ונציג עדיין מדומים, ראו docs/CONTRACTS.md)
+backend/app/agent/          הסוכן: orchestrator (לולאת Gemini) · tools · number_guard · prompts · rep_flow
+backend/app/store.py        שמירת שיחות ושאלות לנציג ב-SQLite (data/app.db)
+backend/app/api/            נתיבי ה-API (ראו docs/CONTRACTS.md)
 backend/scripts/            export_seed.py: אקסל → seed
 frontend/src/design/        מערכת העיצוב המשותפת (tokens + רכיבים), דוגמאות ב-/design
 frontend/src/pages/         עובד · נציג · כללים · מערכת עיצוב

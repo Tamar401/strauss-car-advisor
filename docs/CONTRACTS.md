@@ -13,10 +13,11 @@
 | `POST /api/compare` | אמיתי | א' | `CompareResponse` (400 על רכב לא מוכר) |
 | `POST /api/compare/all` | אמיתי | א' | כל רכב בקטלוג + ויתור, ממוין: מחושבות לפי ההפרש, אחריהן חלקיות, בסוף לא זמינות |
 | `GET /api/demo/compare/{id}` | אמיתי | משותף | `compare/all` לאחד מ-6 העובדים לדוגמה |
-| `POST /api/chat` | **מדומה** | ב' | `ConversationState` |
-| `GET /api/conversations/{id}` | **מדומה** (בזיכרון) | ב' | `ConversationState` |
-| `GET /api/rep/questions?status=open` | **מדומה** (בזיכרון) | א' | `list[RepQuestion]` |
-| `POST /api/rep/questions/{id}/answer` | **מדומה** (בזיכרון) | א' | `RepQuestion` |
+| `POST /api/chat` | אמיתי (Gemini + כלים) | ב' | `ConversationState` |
+| `GET /api/conversations/{id}` | אמיתי (SQLite) | ב' | `ConversationState`, כולל `pending_questions` |
+| `POST /api/conversations/{id\|new}/demo/{employee_id}` | אמיתי | ב' | ממלא את הפרופיל מעובד לדוגמה, בלי מודל |
+| `GET /api/rep/questions?status=open` | אמיתי (SQLite) | א' | `list[RepQuestion]` |
+| `POST /api/rep/questions/{id}/answer` | אמיתי | א' | `RepQuestion`. 409 אם כבר נענתה, 400 על השתתפות שלילית |
 
 ## מושגים מרכזיים
 
