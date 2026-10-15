@@ -1,8 +1,30 @@
 // לקוח ה-API — מקביל לנתיבים ב-backend/app/api. כל המבנים מוגדרים ב-backend/app/contracts.py
+
+// קוד הגישה למסכי הנציג והכללים — נשמר רק ללשונית הנוכחית (sessionStorage), לא לתמיד
+const CODE_KEY = "access_code";
+
+export function getAccessCode() {
+  try {
+    return sessionStorage.getItem(CODE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setAccessCode(code) {
+  try {
+    if (code) sessionStorage.setItem(CODE_KEY, code);
+    else sessionStorage.removeItem(CODE_KEY);
+  } catch {
+    /* מצב פרטי — יבקשו את הקוד שוב */
+  }
+}
+
 async function request(path, options = {}) {
+  const code = getAccessCode();
   const res = await fetch(`/api${path}`, {
-    headers: { "Content-Type": "application/json" },
     ...options,
+    headers: { "Content-Type": "application/json", ...(code ? { "X-Access-Code": code } : {}), ...options.headers },
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
   if (!res.ok) {
@@ -29,8 +51,11 @@ export const api = {
   explore: (id) => request(`/conversations/${id}/explore`, { method: "POST" }),
   loadDemo: (conversationId, employeeId) =>
     request(`/conversations/${conversationId ?? "new"}/demo/${employeeId}`, { method: "POST" }),
+  checkAccess: (role, code) => request(`/auth/check/${role}`, { headers: { "X-Access-Code": code } }),
   repQuestions: (status) => request(`/rep/questions${status ? `?status=${status}` : ""}`),
   answerQuestion: (id, answer) => request(`/rep/questions/${id}/answer`, { method: "POST", body: answer }),
+  searchVehicles: (q, year) =>
+    request(`/vehicles/search?q=${encodeURIComponent(q)}${year ? `&year=${year}` : ""}`),
   rules: () => request("/rules"),
   previewRules: (rules) => request("/rules/preview", { method: "POST", body: { rules } }),
   saveRules: (rules) => request("/rules", { method: "PUT", body: { rules } }),

@@ -80,7 +80,10 @@ class OptionRequest(BaseModel):
     """חלופה: רכב מהקטלוג, רכב במסלול המשפחתי, או ויתור על רכב."""
 
     kind: Literal["car", "family_car", "waiver"]
-    car_id: Optional[str] = None
+    car_id: Optional[str] = None  # רכב מהקטלוג
+    # רכב מחוץ לקטלוג (בדרך כלל הרכב של היום): מזוהה במאגר רשות המסים לפי המפתח המלא
+    vou_key: Optional[VouKey] = None
+    vehicle_label: Optional[str] = None  # שם לתצוגה, למשל "טויוטה COROLLA (2021)"
     # השתתפות העובד ברכב. None = לא ידוע → המנוע יחזיר status='partial' וה-missing יכלול אותה
     participation: Optional[Tracked[float]] = None
 
@@ -115,6 +118,7 @@ class Eligibility(BaseModel):
         "family_track_not_eligible",
         "waiver_allowed",
         "waiver_not_allowed",
+        "not_in_catalog",
         "current",
     ]
     reason_text: str  # משפט בעברית, מוצג לעובד כמו שהוא
@@ -144,7 +148,8 @@ class OptionResult(BaseModel):
     status: Literal["complete", "partial", "blocked"]
     missing: list[str] = []  # שמות שדות חסרים, למשל ["participation"]
     eligibility: Eligibility
-    car: Optional[Car] = None
+    car: Optional[Car] = None  # רק לרכב מהקטלוג
+    drive: Optional[Drive] = None  # סוג ההנעה לפי המאגר — גם לרכב מחוץ לקטלוג
 
     budget: float
     monthly_cost: Optional[float] = None

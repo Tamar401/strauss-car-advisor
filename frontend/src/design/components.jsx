@@ -150,7 +150,8 @@ export function DriveTag({ drive }) {
 }
 
 export function Money({ value, className }) {
-  return <span className={cx("num", className)}>{fmt(value)}</span>;
+  // whitespace-nowrap: "₪" לא נשבר לשורה נפרדת בטלפון
+  return <span className={cx("num whitespace-nowrap", className)}>{fmt(value)}</span>;
 }
 
 /** הפרש נטו: צבע + חץ (לא מסתמכים על צבע בלבד) */
@@ -164,7 +165,7 @@ export function Delta({ value, size = "md" }) {
     lg: "px-3.5 py-1 text-xl font-display font-bold",
   };
   return (
-    <span className={cx("inline-flex items-center gap-1.5 rounded-full", tone, sizes[size])}>
+    <span className={cx("inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full", tone, sizes[size])}>
       <span aria-hidden="true" className="text-[0.7em]">
         {arrow}
       </span>

@@ -23,8 +23,9 @@ function show(value, unit) {
 function currentText(option, catalog) {
   if (!option) return null;
   if (option.kind === "waiver") return "ויתור (אחזקת רכב)";
-  const car = catalog[option.car_id];
-  const name = car ? `${car.model} (${car.registration_year})` : option.car_id;
+  // רכב מהקטלוג, רכב מהמאגר (vou_key), או רכב שעוד לא זוהה — vehicle_label מכסה את שני האחרונים
+  const car = option.car_id ? catalog[option.car_id] : null;
+  const name = car ? `${car.model} (${car.registration_year})` : option.vehicle_label ?? option.car_id ?? "רכב";
   const part = option.participation?.value;
   return part != null ? `${name} · השתתפות ${part.toLocaleString("he-IL")} ₪` : name;
 }

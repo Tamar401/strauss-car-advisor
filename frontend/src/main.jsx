@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter, NavLink, Navigate, Route, Routes } from "react-router-dom";
 
 import "./design/tokens.css";
+import AccessGate from "./components/AccessGate";
 import AdminPage from "./pages/AdminPage";
 import DesignPage from "./pages/DesignPage";
 import EmployeePage from "./pages/EmployeePage";
@@ -87,8 +88,8 @@ function Shell() {
         <Routes>
           <Route path="/" element={<Navigate to="/employee" replace />} />
           <Route path="/employee" element={<EmployeePage />} />
-          <Route path="/rep" element={<RepPage />} />
-          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/rep" element={<AccessGate role="rep"><RepPage /></AccessGate>} />
+          <Route path="/admin" element={<AccessGate role="admin"><AdminPage /></AccessGate>} />
           <Route path="/design" element={<DesignPage />} />
         </Routes>
       </main>

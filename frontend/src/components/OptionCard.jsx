@@ -4,7 +4,7 @@ import NetWaterfall from "./NetWaterfall";
 import Receipt from "./Receipt";
 
 export default function OptionCard({ result, current, isCurrent = false, receiptOpen = false }) {
-  const drive = result.option.kind === "waiver" ? "waiver" : result.car?.drive;
+  const drive = result.option.kind === "waiver" ? "waiver" : result.car?.drive ?? result.drive;
   const petal = DRIVE[drive]?.petal ?? "red";
   const blocked = result.status === "blocked";
   const complete = result.status === "complete" && !isCurrent;
@@ -26,7 +26,7 @@ export default function OptionCard({ result, current, isCurrent = false, receipt
         {result.car ? <bdi>{`${result.car.model} (${result.car.registration_year})`}</bdi> : result.label}
       </div>
 
-      <div className="mt-5 flex items-end justify-between gap-3">
+      <div className="mt-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="text-xs text-ink-soft">נטו משוער</div>
           <Money value={result.net} className="font-display text-2xl font-bold" />

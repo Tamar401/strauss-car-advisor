@@ -227,6 +227,9 @@ export default function EmployeePage() {
             </Button>
           </form>
           {error && <div className="px-5 pb-3 text-sm text-down">{error}</div>}
+          <p className="px-5 pb-3 text-[11px] leading-snug text-ink-soft">
+            🔒 אין צורך בתעודת זהות. נתוני השכר משמשים רק לחישוב, והשיחה נמחקת אוטומטית אחרי 30 יום. החישוב עצמו מתבצע בשרת לפי כללי החברה.
+          </p>
         </Card>
 
         <div className="space-y-6">

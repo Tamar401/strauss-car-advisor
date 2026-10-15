@@ -34,6 +34,7 @@ FIELD_NAMES = {
     "credit_points": "נקודות הזיכוי",
     "children_under_23": "מספר הילדים עד גיל 23",
     "current_option": "הרכב (או הוויתור) שיש לך היום",
+    "current_vehicle": "איזה רכב בדיוק יש לך היום (רמת הגימור)",
     "participation": "סכום ההשתתפות שלך ברכב",
 }
 
@@ -90,8 +91,7 @@ def _car_details(car: dict, rules: Rules):
     key = vou.resolve_catalog_car(car["registration_year"], car["manufacturer_code"], car["model_code"], car["model_description"])
     record = vou.lookup(key)
     drive = DRIVE_KEYS[rules.value_of_use.drive_field[str(record["drive_code"])]]
-    key_text = f"{key.tax_year}/{key.registration_year}/{key.vehicle_type_code}/{key.manufacturer_code}/{key.model_code}"
-    return record["value_of_use"], drive, f"רשות המסים · מפתח {key_text}"
+    return record["value_of_use"], drive, f"רשות המסים · מפתח {vou.key_text(key)}"
 
 
 def _evaluate(option: OptionRequest, ctx: _Context, is_current: bool) -> tuple[OptionResult, NetResult | None]:
@@ -109,6 +109,32 @@ def _evaluate(option: OptionRequest, ctx: _Context, is_current: bool) -> tuple[O
         label = "ויתור על הרכב"
         if elig.maintenance:
             label += f" · אחזקת רכב {_f(elig.maintenance)} ₪"
+    elif option.car_id is None and option.vou_key is None:
+        # יש רכב, אבל עוד לא זוהה במאגר (למשל כמה רמות גימור והעובד לא בטוח) — מחכים לנציג, לא מנחשים
+        label = option.vehicle_label or "הרכב של היום (טרם זוהה)"
+        elig = EligibilityResult(None, missing=["current_vehicle"])
+        missing.append("current_vehicle")
+        if _value(option.participation) is not None:
+            participation, participation_source = option.participation.value, _source(option.participation)
+    elif option.car_id is None and option.vou_key is not None:
+        # רכב מחוץ לקטלוג (בדרך כלל הרכב של היום) — מזוהה במאגר לפי המפתח המלא
+        record = vou.lookup(option.vou_key)
+        if record is None:
+            raise ValueError(f"הרכב לא נמצא במאגר רשות המסים: {vou.key_text(option.vou_key)}")
+        value_of_use = record["value_of_use"]
+        drive = DRIVE_KEYS[rules.value_of_use.drive_field[str(record["drive_code"])]]
+        vou_source = f"רשות המסים · מפתח {vou.key_text(option.vou_key)}"
+        name = option.vehicle_label or f"{record['commercial_name']} ({record['registration_year']})"
+        label = f"{name} · {DRIVE_LABELS[drive]}"
+        elig = EligibilityResult(Eligibility(
+            eligible=False,
+            reason_code="not_in_catalog",
+            reason_text="אפשר לבחור רכב חדש רק מקטלוג הרכבים של החברה",
+        ))
+        if _value(option.participation) is None:
+            missing.append("participation")
+        else:
+            participation, participation_source = option.participation.value, _source(option.participation)
     else:
         car = ctx.catalog.get(option.car_id or "")
         if car is None:
@@ -159,6 +185,7 @@ def _evaluate(option: OptionRequest, ctx: _Context, is_current: bool) -> tuple[O
         missing=missing,
         eligibility=eligibility,
         car=car,
+        drive=drive,
         budget=ctx.budget,
         monthly_cost=car["monthly_cost"] if car else None,
         employee_participation=None if "participation" in missing else participation,

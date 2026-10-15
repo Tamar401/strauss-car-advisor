@@ -19,7 +19,7 @@ from google.genai import types
 
 from app.agent import number_guard
 from app.agent.prompts import system_prompt
-from app.agent.tools import TOOL_SPECS, TOOLS, ToolError, missing_profile_fields
+from app.agent.tools import TOOL_SPECS, TOOLS, ToolError, describe_option, missing_profile_fields
 from app.contracts import ChatMessage, CompareResponse
 from app.engine.rules import load_rules
 from app.store import ConversationRecord, Store
@@ -42,7 +42,11 @@ class GeminiLLM:
     RETRYABLE = (429, 503)
 
     def __init__(self):
-        self.client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+        # פיילוט עם נתונים אמיתיים: Vertex AI (הנתונים לא משמשים לאימון). מוגדר ב-.env בלבד — ראו docs/PRIVACY.md
+        if os.environ.get("GOOGLE_GENAI_USE_VERTEXAI", "").lower() in ("1", "true"):
+            self.client = genai.Client()  # קורא GOOGLE_CLOUD_PROJECT / GOOGLE_CLOUD_LOCATION מהסביבה
+        else:
+            self.client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
         self.models = [
             m for m in (os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite"), os.environ.get("GEMINI_FALLBACK_MODEL", "gemini-3.1-flash-lite")) if m
         ]
@@ -118,10 +122,9 @@ def profile_summary(record: ConversationRecord, store: Store) -> str:
     }
     current = p.current_option.value
     if current is not None:
-        known["current_situation"] = (
-            "ויתור (אחזקת רכב)" if current.kind == "waiver"
-            else f"{current.car_id}, השתתפות {current.participation.value if current.participation else None}"
-        )
+        known["current_situation"] = describe_option(current)
+        if current.kind != "waiver":
+            known["current_participation"] = current.participation.value if current.participation else None
     participations = {car: t.value for car, t in record.participations.items()}
     open_questions = [q.question_text for q in store.questions(conversation_id=record.state.conversation_id, status="open")]
     return (
@@ -162,7 +165,8 @@ def handle_message(record: ConversationRecord, text: str, store: Store) -> Conve
 
             reply = "".join(p.text for p in content.parts or [] if p.text and not p.thought).strip()
             known = comparisons + ([record.state.last_comparison] if record.state.last_comparison else [])
-            unbacked = number_guard.check(reply, number_guard.allowed_numbers(record, rules, known))
+            turn_history = [c.model_dump(mode="json", exclude_none=True) for c in history]  # כולל תוצאות הכלים מהתור הזה
+            unbacked = number_guard.check(reply, number_guard.allowed_numbers(record, rules, known, turn_history))
             if not unbacked:
                 break
             record.guard_events.append({"at": datetime.now(timezone.utc).isoformat(), "text": reply, "unbacked": unbacked})

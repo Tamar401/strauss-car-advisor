@@ -14,6 +14,12 @@
 | `PUT /api/rules` | אמיתי | ב' | שומר אחרי ולידציה; הגרסה הקודמת נשמרת ב-`config/history/`. ⚠️ בפיילוט: רק למנהלים מחוברים |
 | `POST /api/rules/undo` | אמיתי | ב' | משחזר את הגרסה האחרונה מההיסטוריה (404 אם אין) |
 | `POST /api/conversations/{id}/explore` | אמיתי | א' | כל החלופות בבת אחת, בלי מודל שפה. 409 אם הפרופיל לא שלם |
+| `GET /api/vehicles/search?q=&year=` | אמיתי, **קוד נציג** | א' | חיפוש במאגר המלא — לזיהוי הרכב של היום |
+| `GET /api/auth/check/{rep\|admin}` | אמיתי | משותף | 200 אם הקוד בכותרת `X-Access-Code` פותח את המסך |
+
+**הרשאות:** `/api/rep/*` ו-`/api/vehicles/search` דורשים קוד נציג (או מנהל). `POST /api/rules/preview`, `PUT /api/rules`, `POST /api/rules/undo` דורשים קוד מנהל. קוד שלא הוגדר ב-`.env` = מצב פיתוח פתוח.
+
+**רכב מחוץ לקטלוג:** `OptionRequest` עם `vou_key` (ובלי `car_id`) — רק כמצב היום. כחלופה הוא `blocked` עם `not_in_catalog`. רכב בלי שניהם = "טרם זוהה": המצב היום `partial` עם `missing=["current_vehicle"]`, ושאלה לנציג מסוג `current_vehicle` (התשובה: מפתח מהמאגר, לא טקסט חופשי).
 | `POST /api/compare` | אמיתי | א' | `CompareResponse` (400 על רכב לא מוכר) |
 | `POST /api/compare/all` | אמיתי | א' | כל רכב בקטלוג + ויתור, ממוין: מחושבות לפי ההפרש, אחריהן חלקיות, בסוף לא זמינות |
 | `GET /api/demo/compare/{id}` | אמיתי | משותף | `compare/all` לאחד מ-6 העובדים לדוגמה |
