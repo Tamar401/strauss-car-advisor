@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import sqlite3
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from pydantic import BaseModel, Field
@@ -30,16 +30,30 @@ class ConversationRecord(BaseModel):
 class Store:
     def __init__(self, path: Path = DB_PATH):
         self._lock = threading.Lock()
-        self._con = sqlite3.connect(path, check_same_thread=False)
+        self._con = sqlite3.connect(path, check_same_thread=False, timeout=10)
         self._con.executescript(
             """
+            PRAGMA journal_mode = WAL;      -- קוראים לא חוסמים כותבים
+            PRAGMA busy_timeout = 5000;
             CREATE TABLE IF NOT EXISTS conversations (id TEXT PRIMARY KEY, data TEXT NOT NULL, updated_at TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS rep_questions (
                 id TEXT PRIMARY KEY, conversation_id TEXT NOT NULL, status TEXT NOT NULL,
                 created_at TEXT NOT NULL, data TEXT NOT NULL
             );
+            CREATE INDEX IF NOT EXISTS idx_questions_status ON rep_questions (status, created_at);
+            CREATE INDEX IF NOT EXISTS idx_questions_conversation ON rep_questions (conversation_id);
+            CREATE INDEX IF NOT EXISTS idx_conversations_updated ON conversations (updated_at);
             """
         )
+
+    def purge_older_than(self, days: int) -> int:
+        """מחיקת שיחות (ושאלות הנציג שלהן) שלא עודכנו X ימים — נתוני שכר לא נשמרים לנצח."""
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        with self._lock, self._con:
+            old = [r[0] for r in self._con.execute("SELECT id FROM conversations WHERE updated_at < ?", (cutoff,))]
+            self._con.executemany("DELETE FROM rep_questions WHERE conversation_id = ?", [(i,) for i in old])
+            self._con.executemany("DELETE FROM conversations WHERE id = ?", [(i,) for i in old])
+        return len(old)
 
     # ---------- שיחות ----------
 

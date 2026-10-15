@@ -80,7 +80,7 @@ export default function DesignPage() {
               <SourceBadge key={s} source={s} />
             ))}
           </div>
-          <div className="flex gap-8">
+          <div className="flex flex-wrap gap-x-8 gap-y-4">
             <Stat label="נטו היום" sub="לפני השינוי">
               <span className="num">11,032 ₪</span>
             </Stat>

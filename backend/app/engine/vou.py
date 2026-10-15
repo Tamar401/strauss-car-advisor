@@ -110,13 +110,46 @@ def resolve_catalog_car(
     return VouKey(**{k: matches[0][k] for k in KEY})
 
 
-def search(text: str, registration_year: int | None = None, limit: int = 10) -> list[dict]:
-    """חיפוש לפי כינוי מסחרי / יצרן — לשימוש הסוכן כשעובד מתאר רכב במילים."""
-    sql = "SELECT * FROM vou WHERE (commercial_name LIKE ? OR manufacturer LIKE ?)"
-    params: list = [f"%{text.strip()}%", f"%{text.strip()}%"]
+def key_of(row: dict) -> VouKey:
+    return VouKey(**{k: row[k] for k in KEY})
+
+
+def key_text(key: VouKey) -> str:
+    return f"{key.tax_year}/{key.registration_year}/{key.vehicle_type_code}/{key.manufacturer_code}/{key.model_code}"
+
+
+def parse_key(text: str) -> VouKey:
+    parts = text.strip().split("/")
+    if len(parts) != 5:
+        raise ValueError(f"מפתח לא תקין: {text}")
+    return VouKey(
+        tax_year=int(parts[0]), registration_year=int(parts[1]), vehicle_type_code=int(parts[2]),
+        manufacturer_code=parts[3], model_code=parts[4],
+    )
+
+
+def search(text: str, registration_year: int | None = None, limit: int = 12, tax_year: int = 2026) -> tuple[list[dict], int]:
+    """חיפוש רכב כפי שעובד מתאר אותו: כל מילה חייבת להופיע ביצרן, בכינוי המסחרי, בתאור הדגם או בקוד הדגם.
+
+    מחזיר (התאמות, סה"כ). אותו כינוי ושנה מופיעים לרוב בכמה רמות גימור עם שווי שימוש שונה —
+    לכן מחזירים את כולן (עד limit) ולא בוחרים אחת.
+    """
+    words = [w for w in text.upper().split() if w]
+    if not words:
+        return [], 0
+    where = ["tax_year = ?"]
+    params: list = [tax_year]
+    for w in words:
+        where.append("(UPPER(manufacturer) LIKE ? OR UPPER(commercial_name) LIKE ? OR UPPER(model_description) LIKE ? OR model_code = ?)")
+        params += [f"%{w}%", f"%{w}%", f"%{w}%", w.zfill(5) if w.isdigit() else w]
     if registration_year is not None:
-        sql += " AND registration_year = ?"
+        where.append("registration_year = ?")
         params.append(registration_year)
-    sql += " ORDER BY registration_year DESC LIMIT ?"
-    params.append(limit)
-    return [dict(r) for r in _connection().execute(sql, params).fetchall()]
+    condition = " AND ".join(where)
+    con = _connection()
+    total = con.execute(f"SELECT COUNT(*) FROM vou WHERE {condition}", params).fetchone()[0]
+    rows = con.execute(
+        f"SELECT * FROM vou WHERE {condition} ORDER BY registration_year DESC, commercial_name, list_price LIMIT ?",
+        [*params, limit],
+    ).fetchall()
+    return [dict(r) for r in rows], total

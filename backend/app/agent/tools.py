@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from app import seed
 from app.contracts import CompareRequest, CompareResponse, OptionRequest, RepQuestion, Tracked
+from app.engine import vou
 from app.engine.compare import DRIVE_LABELS, compare
 from app.engine.eligibility import check_car
 from app.engine.rules import load_rules
@@ -38,15 +39,40 @@ TOOL_SPECS = [
     },
     {
         "name": "set_current_situation",
-        "description": "מה יש לעובד היום: רכב מהקטלוג (car_id) והשתתפותו בו, או ויתור (אחזקת רכב).",
+        "description": (
+            "מה יש לעובד היום: רכב והשתתפותו בו, או ויתור (אחזקת רכב). "
+            "רכב מהקטלוג — car_id. רכב שלא בקטלוג — vou_key מתוצאת find_vehicle (רק אחרי שזוהה חד-משמעית)."
+        ),
         "parameters": {
             "type": "object",
             "properties": {
                 "kind": {"type": "string", "enum": ["car", "waiver"]},
-                "car_id": {"type": "string", "description": "מזהה מהקטלוג, למשל CAR-09. רק כש-kind=car"},
+                "car_id": {"type": "string", "description": "מזהה מהקטלוג, למשל CAR-09"},
+                "vou_key": {"type": "string", "description": "מפתח מהמאגר מתוך find_vehicle, למשל 2026/2021/1/00413/00296"},
+                "vehicle_description": {
+                    "type": "string",
+                    "description": "כשהרכב עוד לא זוהה חד-משמעית: מה שהעובד אמר (למשל 'טויוטה קורולה 2021'). ואז ask_rep about=current_vehicle",
+                },
                 "participation": {"type": "number", "description": "השתתפות חודשית היום בש״ח, כפי שהעובד אמר"},
             },
             "required": ["kind"],
+        },
+    },
+    {
+        "name": "find_vehicle",
+        "description": (
+            "חיפוש הרכב של היום במאגר רשות המסים (כל הרכבים, לא רק הקטלוג). "
+            "query: יצרן ו/או דגם — כינוי הדגם באנגלית כמו ברישיון (COROLLA, OCTAVIA), או קוד הדגם מהרישיון. "
+            "לרוב יחזרו כמה רמות גימור עם שווי שימוש שונה: אסור לבחור אחת לבד — מציגים לעובד, "
+            "ואם לא יודע — ask_rep (הנציג מזהה לפי מספר הרישוי)."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "registration_year": {"type": "integer", "description": "שנת רישום (עלייה לכביש)"},
+            },
+            "required": ["query"],
         },
     },
     {
@@ -88,8 +114,13 @@ TOOL_SPECS = [
         "parameters": {
             "type": "object",
             "properties": {
-                "car_id": {"type": "string", "description": "הרכב שעליו השאלה, אם רלוונטי"},
-                "question_text": {"type": "string", "description": "השאלה לנציג, בעברית"},
+                "car_id": {"type": "string", "description": "רכב מהקטלוג שעליו השאלה (השתתפות ברכב חדש)"},
+                "about": {
+                    "type": "string",
+                    "enum": ["current_vehicle"],
+                    "description": "current_vehicle = לא ברור איזה רכב יש לעובד היום (איזו רמת גימור); הנציג יזהה לפי מספר הרישוי",
+                },
+                "question_text": {"type": "string", "description": "השאלה לנציג, בעברית. לכלול את מה שהעובד כן אמר (יצרן, דגם, שנה)"},
             },
             "required": ["question_text"],
         },
@@ -145,19 +176,81 @@ def update_profile(record: ConversationRecord, store: Store, **fields) -> dict:
     return {"saved": saved, "still_missing": missing_profile_fields(record)}
 
 
-def set_current_situation(record: ConversationRecord, store: Store, kind: str, car_id: str | None = None, participation: float | None = None) -> dict:
+def vehicle_candidate(row: dict) -> dict:
+    """רשומה מהמאגר בצורה שעובד יכול לזהות: יצרן, דגם, רמת גימור, נפח מנוע, מחיר מחירון."""
+    rules = load_rules()
+    return {
+        "vou_key": vou.key_text(vou.key_of(row)),
+        "name": f"{row['manufacturer']} {row['commercial_name']} ({row['registration_year']})",
+        "trim": row["model_description"],
+        "model_code": row["model_code"],
+        "engine_cc": int(row["engine_cc"]) if str(row["engine_cc"]).isdigit() and int(row["engine_cc"]) else None,
+        "drive": rules.value_of_use.drive_field[str(row["drive_code"])],
+        "list_price": row["list_price"],
+        "value_of_use": row["value_of_use"],
+    }
+
+
+def vehicle_label(row: dict) -> str:
+    return f"{row['manufacturer']} {row['commercial_name']} ({row['registration_year']})"
+
+
+def find_vehicle(record: ConversationRecord, store: Store, query: str, registration_year: int | None = None) -> dict:
+    rows, total = vou.search(query, registration_year)
+    result = {"total_matches": total, "candidates": [vehicle_candidate(r) for r in rows]}
+    if total == 0:
+        result["hint"] = "לא נמצא. לנסות את כינוי הדגם באנגלית כמו ברישיון, או בלי שנה"
+    elif total > len(rows):
+        result["hint"] = f"יש {total} התאמות — לצמצם: שנת רישום, רמת גימור או קוד הדגם מהרישיון"
+    elif len({c['value_of_use'] for c in result["candidates"]}) > 1:
+        result["hint"] = "כמה רמות גימור עם שווי שימוש שונה — לשאול את העובד איזו, ואם לא יודע: ask_rep עם about=current_vehicle"
+    return result
+
+
+def set_current_situation(
+    record: ConversationRecord,
+    store: Store,
+    kind: str,
+    car_id: str | None = None,
+    vou_key: str | None = None,
+    participation: float | None = None,
+    vehicle_description: str | None = None,
+) -> dict:
+    tracked_participation = _tracked(participation) if participation is not None else Tracked(source="missing")
     if kind == "waiver":
         option = OptionRequest(kind="waiver")
-    else:
+    elif car_id:
         if car_id not in _catalog():
-            raise ToolError(f"רכב לא מוכר בקטלוג: {car_id}. לחפש עם list_catalog")
-        option = OptionRequest(
-            kind="car",
-            car_id=car_id,
-            participation=_tracked(participation) if participation is not None else Tracked(source="missing"),
-        )
+            raise ToolError(f"רכב לא מוכר בקטלוג: {car_id}. רכב שלא בקטלוג — לחפש עם find_vehicle")
+        option = OptionRequest(kind="car", car_id=car_id, participation=tracked_participation)
+    elif vou_key:
+        try:
+            key = vou.parse_key(vou_key)
+        except ValueError as e:
+            raise ToolError(str(e))
+        row = vou.lookup(key)
+        if row is None:
+            raise ToolError(f"המפתח לא נמצא במאגר: {vou_key}. לחפש עם find_vehicle")
+        option = OptionRequest(kind="car", vou_key=key, vehicle_label=vehicle_label(row), participation=tracked_participation)
+    elif vehicle_description:
+        # הרכב עוד לא זוהה חד-משמעית: שומרים מה שהעובד אמר (ואת ההשתתפות), והנציג יזהה
+        option = OptionRequest(kind="car", vehicle_label=f"{vehicle_description.strip()[:60]} (טרם זוהה)", participation=tracked_participation)
+    else:
+        raise ToolError("לרכב צריך car_id (מהקטלוג), vou_key (מ-find_vehicle), או vehicle_description אם עוד לא זוהה")
     record.state.profile.current_option = _tracked(option)
-    return {"saved": option.model_dump(exclude_none=True), "still_missing": missing_profile_fields(record)}
+    return {"saved": option.model_dump(mode="json", exclude_none=True), "still_missing": missing_profile_fields(record)}
+
+
+def describe_option(option: OptionRequest | None) -> str:
+    """שם קצר לחלופה — לנציג, לפרופיל ולפרומפט."""
+    if option is None:
+        return "לא ידוע"
+    if option.kind == "waiver":
+        return "ויתור (אחזקת רכב)"
+    if option.car_id:
+        car = _catalog().get(option.car_id)
+        return f"{car['model']} ({car['registration_year']})" if car else option.car_id
+    return option.vehicle_label or "רכב מהמאגר"
 
 
 def list_catalog(record: ConversationRecord, store: Store) -> dict:
@@ -199,15 +292,21 @@ def compare_options(record: ConversationRecord, store: Store, options: list[dict
     return summarize(resp)
 
 
-def ask_rep(record: ConversationRecord, store: Store, question_text: str, car_id: str | None = None) -> dict:
-    field = f"participation:{car_id}" if car_id else "other"
+def ask_rep(
+    record: ConversationRecord, store: Store, question_text: str, car_id: str | None = None, about: str | None = None
+) -> dict:
+    if about == "current_vehicle":
+        field = "current_vehicle"
+    elif car_id:
+        field = f"participation:{car_id}"
+    else:
+        field = "other"
     for q in store.questions(conversation_id=record.state.conversation_id, status="open"):
         if q.field == field:
             return {"already_open": True, "question_id": q.id}
     catalog = _catalog()
     profile = record.state.profile
-    current = profile.current_option.value
-    current_text = "ויתור" if current and current.kind == "waiver" else (catalog[current.car_id]["model"] if current else "לא ידוע")
+    current_text = describe_option(profile.current_option.value)
     group = profile.group.value
     if profile.occupation.value:
         group = _occupations()[profile.occupation.value]["group"]
@@ -238,6 +337,7 @@ def ask_rep(record: ConversationRecord, store: Store, question_text: str, car_id
 TOOLS = {
     "update_profile": update_profile,
     "set_current_situation": set_current_situation,
+    "find_vehicle": find_vehicle,
     "list_catalog": list_catalog,
     "compare_options": compare_options,
     "ask_rep": ask_rep,
@@ -284,8 +384,12 @@ def missing_profile_fields(record: ConversationRecord) -> list[str]:
     missing = [f for f in PROFILE_NUMBERS if p.__getattribute__(f).value is None]
     if p.occupation.value is None and p.group.value is None:
         missing.insert(0, "occupation")
-    if p.current_option.value is None:
+    current = p.current_option.value
+    if current is None:
         missing.append("current_situation")
-    elif p.current_option.value.kind == "car" and p.current_option.value.participation.value is None:
-        missing.append("current_participation")
+    elif current.kind == "car":
+        if current.car_id is None and current.vou_key is None:
+            missing.append("current_vehicle")
+        if current.participation is None or current.participation.value is None:
+            missing.append("current_participation")
     return missing

@@ -29,7 +29,10 @@ class ScriptedLLM:
 
 
 @pytest.fixture(autouse=True)
-def isolated(tmp_path):
+def isolated(tmp_path, monkeypatch):
+    # מצב פתוח כברירת מחדל בבדיקות, בלי קשר ל-.env; בדיקות ההרשאות מגדירות קודים בעצמן
+    monkeypatch.delenv("REP_ACCESS_CODE", raising=False)
+    monkeypatch.delenv("ADMIN_ACCESS_CODE", raising=False)
     store = Store(tmp_path / "app.db")
     use_store(store)
     llm = ScriptedLLM()
