@@ -3,9 +3,11 @@ import { useEffect, useRef, useState } from "react";
 
 import { api } from "../api";
 import OptionCard from "../components/OptionCard";
-import { Button, Card, ChatBubble, PetalMark, SectionTitle } from "../design/components";
+import ProfileCard from "../components/ProfileCard";
+import { Button, Card, ChatBubble, Notice, PetalMark, SectionTitle } from "../design/components";
 
 const STORAGE_KEY = "conversation_id";
+const POLL_MS = 3000;
 
 const STARTERS = [
   "אני שוקל/ת לעבור לרכב חשמלי. כמה זה ישנה לי בנטו?",
@@ -30,37 +32,75 @@ function storeId(id) {
   }
 }
 
+function TypingBubble() {
+  return (
+    <ChatBubble role="assistant">
+      <span className="inline-flex gap-1" aria-label="היועץ מקליד">
+        {[0, 1, 2].map((i) => (
+          <span key={i} className="h-2 w-2 animate-bounce rounded-full bg-ink-soft/60" style={{ animationDelay: `${i * 150}ms` }} />
+        ))}
+      </span>
+    </ChatBubble>
+  );
+}
+
 export default function EmployeePage() {
   const [state, setState] = useState(null);
   const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState(null); // ההודעה שנשלחה ועוד לא נענתה
   const [error, setError] = useState(null);
+  const [catalog, setCatalog] = useState({});
+  const [demos, setDemos] = useState([]);
   const endRef = useRef(null);
+  const busy = pending != null;
 
-  // אחרי רענון: משחזרים את השיחה מהשרת
   useEffect(() => {
     const id = readStoredId();
     if (id) api.conversation(id).then(setState).catch(() => storeId(null));
+    api.catalog().then((cars) => setCatalog(Object.fromEntries(cars.map((c) => [c.id, c]))));
+    api.demoEmployees().then(setDemos);
   }, []);
+
+  // ממתינים לנציג: מושכים את השיחה כל כמה שניות, וכשהוא עונה — ההשוואה מתעדכנת לבד
+  useEffect(() => {
+    if (state?.status !== "waiting_for_rep" || busy) return;
+    const t = setInterval(() => {
+      api.conversation(state.conversation_id).then(setState).catch(() => {});
+    }, POLL_MS);
+    return () => clearInterval(t);
+  }, [state?.status, state?.conversation_id, busy]);
 
   // בסוגריים מסולסלים בכוונה: בדפדפנים חדשים scrollIntoView מחזיר Promise, ו-React ינסה להפעיל אותו כ-cleanup
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [state?.messages.length]);
+  }, [state?.messages.length, pending]);
 
   async function send(message) {
-    if (!message.trim() || busy) return;
-    setBusy(true);
+    const clean = message.trim();
+    if (!clean || busy) return;
+    setPending(clean);
+    setText("");
     setError(null);
     try {
-      const next = await api.chat(state?.conversation_id ?? null, message.trim());
+      const next = await api.chat(state?.conversation_id ?? null, clean);
       storeId(next.conversation_id);
       setState(next);
-      setText("");
     } catch (err) {
       setError(err.message);
+      setText(clean);
     } finally {
-      setBusy(false);
+      setPending(null);
+    }
+  }
+
+  async function loadDemo(employeeId) {
+    setError(null);
+    try {
+      const next = await api.loadDemo(state?.conversation_id, employeeId);
+      storeId(next.conversation_id);
+      setState(next);
+    } catch (err) {
+      setError(err.message);
     }
   }
 
@@ -69,7 +109,9 @@ export default function EmployeePage() {
     setState(null);
   }
 
-  const comparison = state?.last_comparison;
+  // ההשוואה האחרונה שצורפה להודעה — כך הכרטיסים תמיד תואמים למה שהבוט אמר
+  const comparison = [...(state?.messages ?? [])].reverse().find((m) => m.comparison)?.comparison;
+  const messages = state?.messages ?? [];
 
   return (
     <div className="space-y-8">
@@ -83,7 +125,7 @@ export default function EmployeePage() {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
-        <Card className="glass flex h-[68vh] min-h-[460px] flex-col p-0">
+        <Card className="glass flex h-[72vh] min-h-[480px] flex-col p-0">
           <div className="flex items-center justify-between border-b border-border/70 px-5 py-3">
             <div className="flex items-center gap-2.5">
               <div className="relative">
@@ -92,7 +134,9 @@ export default function EmployeePage() {
               </div>
               <div className="leading-tight">
                 <div className="font-display font-bold">יועץ הרכב</div>
-                <div className="text-xs text-ink-soft">{busy ? "מקליד…" : "זמין עכשיו"}</div>
+                <div className="text-xs text-ink-soft">
+                  {busy ? "מקליד…" : state?.status === "waiting_for_rep" ? "ממתין לתשובת הנציג" : "זמין עכשיו"}
+                </div>
               </div>
             </div>
             <Button variant="ghost" onClick={reset}>
@@ -101,7 +145,7 @@ export default function EmployeePage() {
           </div>
 
           <div className="flex-1 space-y-3 overflow-y-auto px-5 py-5">
-            {!state && (
+            {messages.length === 0 && !busy && (
               <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
                 <PetalMark size={56} />
                 <p className="max-w-xs text-sm text-ink-soft">במה אפשר לעזור? אפשר לכתוב חופשי, או להתחיל מכאן:</p>
@@ -116,13 +160,37 @@ export default function EmployeePage() {
                     </button>
                   ))}
                 </div>
+                {demos.length > 0 && (
+                  <div className="mt-2 text-xs text-ink-soft">
+                    <div className="mb-2">או לטעון נתוני דמו:</div>
+                    <div className="flex flex-wrap justify-center gap-1.5">
+                      {demos.map((d) => (
+                        <button
+                          key={d.id}
+                          onClick={() => loadDemo(d.id)}
+                          className="rounded-full bg-muted px-3 py-1 transition hover:bg-brand-soft hover:text-brand"
+                        >
+                          {d.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
-            {state?.messages.map((m) => (
-              <ChatBubble key={m.id} role={m.role}>
-                {m.text}
-              </ChatBubble>
-            ))}
+            {messages.map((m) =>
+              m.role === "system" ? (
+                <div key={m.id} className="animate-rise text-center">
+                  <span className="inline-block rounded-full bg-muted px-3 py-1 text-xs text-ink-soft">{m.text}</span>
+                </div>
+              ) : (
+                <ChatBubble key={m.id} role={m.role}>
+                  {m.text}
+                </ChatBubble>
+              ),
+            )}
+            {pending && <ChatBubble role="user">{pending}</ChatBubble>}
+            {pending && <TypingBubble />}
             <div ref={endRef} />
           </div>
 
@@ -146,23 +214,35 @@ export default function EmployeePage() {
           {error && <div className="px-5 pb-3 text-sm text-down">{error}</div>}
         </Card>
 
-        <div>
-          <SectionTitle hint={comparison ? `כללים: ${comparison.rules_version}` : undefined}>ההשוואה שלך</SectionTitle>
-          {comparison ? (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <OptionCard result={comparison.current} isCurrent />
-              {comparison.alternatives.map((a, i) => (
-                <OptionCard key={i} result={a} />
-              ))}
-            </div>
-          ) : (
-            <Card className="glass flex flex-col items-center gap-3 py-12 text-center">
-              <div className="petal-ribbon h-1.5 w-24 rounded-full opacity-70" />
-              <p className="max-w-sm text-sm text-ink-soft">
-                ההשוואה תופיע כאן ברגע שיהיו מספיק נתונים: כל חלופה עם הנטו המשוער, ההפרש מול היום, והסבר במילים פשוטות.
-              </p>
-            </Card>
+        <div className="space-y-6">
+          {state && <ProfileCard state={state} catalog={catalog} />}
+
+          {state?.pending_questions?.length > 0 && (
+            <Notice>
+              ⏳ שאלתי את נציג התחבורה: {state.pending_questions.map((q) => q.question_text).join(" · ")}
+              <br />
+              ההשוואה תתעדכן כאן לבד ברגע שיענה.
+            </Notice>
           )}
+
+          <div>
+            <SectionTitle hint={comparison ? `כללים: ${comparison.rules_version}` : undefined}>ההשוואה שלך</SectionTitle>
+            {comparison ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <OptionCard result={comparison.current} isCurrent />
+                {comparison.alternatives.map((a, i) => (
+                  <OptionCard key={i} result={a} />
+                ))}
+              </div>
+            ) : (
+              <Card className="glass flex flex-col items-center gap-3 py-12 text-center">
+                <div className="petal-ribbon h-1.5 w-24 rounded-full opacity-70" />
+                <p className="max-w-sm text-sm text-ink-soft">
+                  ההשוואה תופיע כאן ברגע שיהיו מספיק נתונים: כל חלופה עם הנטו המשוער, ההפרש מול היום, והסבר במילים פשוטות.
+                </p>
+              </Card>
+            )}
+          </div>
         </div>
       </div>
     </div>

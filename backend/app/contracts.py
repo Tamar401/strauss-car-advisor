@@ -222,6 +222,7 @@ class ConversationState(BaseModel):
 
     conversation_id: str
     status: Literal["collecting", "waiting_for_rep", "ready"]
+    employee_display_name: Optional[str] = None  # שם פרטי בלבד, לנציג
     messages: list[ChatMessage]
     profile: EmployeeProfile
     pending_questions: list[RepQuestion] = []

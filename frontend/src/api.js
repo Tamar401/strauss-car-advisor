@@ -20,6 +20,8 @@ export const api = {
   chat: (conversationId, message) =>
     request("/chat", { method: "POST", body: { conversation_id: conversationId, message } }),
   conversation: (id) => request(`/conversations/${id}`),
+  loadDemo: (conversationId, employeeId) =>
+    request(`/conversations/${conversationId ?? "new"}/demo/${employeeId}`, { method: "POST" }),
   repQuestions: (status) => request(`/rep/questions${status ? `?status=${status}` : ""}`),
   answerQuestion: (id, answer) => request(`/rep/questions/${id}/answer`, { method: "POST", body: answer }),
 };
