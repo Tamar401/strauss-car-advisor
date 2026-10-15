@@ -106,7 +106,7 @@ def compute_net(inp: NetInput, rules: Rules, sources: dict[str, str] | None = No
             "pension_credit",
             "זיכוי פנסיה",
             pension_credit,
-            f"{_n(m.pension_credit.rate * 100)}% × min(הפרשה {_n(pension)}, {_n(m.pension_credit.max_credited_contribution)})",
+            f"{_n(m.pension_credit.rate * 100)}% מהנמוך מבין ההפרשה ({_n(pension)} ₪) לתקרה ({_n(m.pension_credit.max_credited_contribution)} ₪)",
             f"{RULES_FILE} · netMethod.pensionCredit",
         ),
         line("income_tax", "מס הכנסה", income_tax, "מס לפי מדרגות פחות זיכויים (לא פחות מ-0)"),
