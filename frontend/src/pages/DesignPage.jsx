@@ -23,7 +23,7 @@ const PETALS = ["red", "orange", "yellow", "lime", "green", "teal", "blue"];
 export default function DesignPage() {
   const [comparison, setComparison] = useState(null);
   useEffect(() => {
-    api.compare({}, []).then(setComparison);
+    api.demoCompare("E-001").then(setComparison);
   }, []);
 
   return (

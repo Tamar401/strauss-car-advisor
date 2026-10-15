@@ -162,7 +162,9 @@ class OptionResult(BaseModel):
     pension_employee: Optional[float] = None
     study_fund_employee: Optional[float] = None
     net: Optional[float] = None
-    delta_net: Optional[float] = None  # מול המצב היום; None במצב הנוכחי עצמו
+    delta_net: Optional[float] = None  # מול המצב היום, מדויק; None במצב הנוכחי עצמו. סכום ה-waterfall שווה לו
+    # ההפרש כפי שמוצג: נטו מעוגל פחות נטו מעוגל — כך שהמספרים על המסך תמיד מסתדרים (כמו בגיליון הייחוס)
+    delta_display: Optional[int] = None
 
     explanation: str  # שתי שורות בעברית פשוטה, נבנה מה-trace
     trace: list[TraceLine] = []

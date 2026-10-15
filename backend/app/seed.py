@@ -7,7 +7,6 @@ ROOT = Path(__file__).resolve().parents[2]
 SEED = ROOT / "data" / "seed"
 RULES_PATH = ROOT / "config" / "strauss-rules.json"
 VOU_CSV = ROOT / "data" / "raw" / "vou_2026.csv"
-MOCKS = Path(__file__).resolve().parent / "mocks"
 
 
 def _load(path: Path):
@@ -37,7 +36,3 @@ def golden() -> list[dict]:
 def rules() -> dict:
     # בלי cache — כדי ששינוי בקובץ ייכנס לתוקף בלי להפעיל מחדש
     return _load(RULES_PATH)
-
-
-def mock(name: str) -> dict:
-    return _load(MOCKS / name)

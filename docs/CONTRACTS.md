@@ -10,7 +10,9 @@
 | `GET /api/occupations` | אמיתי | משותף | `list[Occupation]` |
 | `GET /api/demo-employees` | אמיתי | משותף | 6 העובדים לדוגמה, בלי ת״ז |
 | `GET /api/rules` | אמיתי | ב' | קובץ הכללים |
-| `POST /api/compare` | **מדומה** | א' | `CompareResponse` |
+| `POST /api/compare` | אמיתי | א' | `CompareResponse` (400 על רכב לא מוכר) |
+| `POST /api/compare/all` | אמיתי | א' | כל רכב בקטלוג + ויתור, ממוין: מחושבות לפי ההפרש, אחריהן חלקיות, בסוף לא זמינות |
+| `GET /api/demo/compare/{id}` | אמיתי | משותף | `compare/all` לאחד מ-6 העובדים לדוגמה |
 | `POST /api/chat` | **מדומה** | ב' | `ConversationState` |
 | `GET /api/conversations/{id}` | **מדומה** (בזיכרון) | ב' | `ConversationState` |
 | `GET /api/rep/questions?status=open` | **מדומה** (בזיכרון) | א' | `list[RepQuestion]` |
@@ -28,6 +30,15 @@
 **`trace`**: הקבלה של החישוב. ה-Number Guard בודק את הטקסט של הבוט מול השדות `amount` שבה.
 
 **`waterfall`**: פירוק ההפרש. סכום ה-`amount` שווה בדיוק ל-`delta_net`. יש לזה בדיקה.
+
+**`delta_net` מול `delta_display`**: `delta_net` הוא ההפרש המדויק. `delta_display` הוא נטו מעוגל פחות נטו מעוגל, וזה מה **שמציגים** (בכרטיס ובטקסט של הבוט). אחרת העובד יכול לראות 15,047 ← 13,109 ולצידם "−1,939". גם גיליון הייחוס מחשב כך.
+
+**השתתפות ברכב חדש**:
+- `participation` לא נשלח (None) ← ברירת המחדל מהקטלוג, ומסומנת ב-trace כ"קטלוג (ברירת מחדל)".
+- `participation` נשלח עם `source="missing"` ← החלופה `partial`, ושואלים את הנציג.
+הסוכן מחליט איזה מהשניים לפי מה שהעובד אמר.
+
+**קבוצת הזכאות**: כשהעיסוק ידוע, הקבוצה נקבעת לפי טבלת העיסוקים ולא לפי מה שהעובד הקליד.
 
 **עיגול**: השרת מחזיר ערכים בלי עיגול. הממשק מעגל לשקל ב-`design/format.js`.
 
