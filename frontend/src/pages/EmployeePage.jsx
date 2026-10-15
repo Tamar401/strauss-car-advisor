@@ -231,7 +231,7 @@ export default function EmployeePage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <OptionCard result={comparison.current} isCurrent />
                 {comparison.alternatives.map((a, i) => (
-                  <OptionCard key={i} result={a} />
+                  <OptionCard key={i} result={a} current={comparison.current} />
                 ))}
               </div>
             ) : (

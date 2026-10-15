@@ -1,10 +1,13 @@
-// כרטיס חלופה בסיסי — בעלות: מפתחת א'. כאן ייכנסו גרף המפל וה"קבלה" הנפתחת (16/10, 18/10).
+// כרטיס חלופה — בעלות: מפתחת א'. כולל את גרף המפל ואת ה"קבלה" הנפתחת.
 import { Card, Delta, DRIVE, DriveTag, Money, StatusBadge } from "../design/components";
+import NetWaterfall from "./NetWaterfall";
+import Receipt from "./Receipt";
 
-export default function OptionCard({ result, isCurrent = false }) {
+export default function OptionCard({ result, current, isCurrent = false, receiptOpen = false }) {
   const drive = result.option.kind === "waiver" ? "waiver" : result.car?.drive;
   const petal = DRIVE[drive]?.petal ?? "red";
   const blocked = result.status === "blocked";
+  const complete = result.status === "complete" && !isCurrent;
 
   return (
     <Card interactive className={`relative overflow-hidden animate-rise ${blocked ? "opacity-70" : ""}`}>
@@ -35,6 +38,9 @@ export default function OptionCard({ result, isCurrent = false }) {
       <p className="mt-4 whitespace-pre-line border-t border-border/70 pt-3 text-sm leading-relaxed text-ink-soft">
         {result.explanation}
       </p>
+
+      {complete && <NetWaterfall steps={result.waterfall} total={result.delta_display} />}
+      {result.trace?.length > 0 && (isCurrent || complete) && <Receipt current={isCurrent ? null : current} alt={result} defaultOpen={receiptOpen} />}
     </Card>
   );
 }

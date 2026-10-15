@@ -109,7 +109,7 @@ export default function DesignPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <OptionCard result={comparison.current} isCurrent />
             {comparison.alternatives.map((a, i) => (
-              <OptionCard key={i} result={a} />
+              <OptionCard key={i} result={a} current={comparison.current} receiptOpen={i === 0} />
             ))}
           </div>
         </section>
